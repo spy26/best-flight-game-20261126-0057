@@ -259,7 +259,9 @@ class SkylineHarborGame {
       this.plane.canopy.visible = false;
       this.plane.propeller.visible = false;
       // Sit in the seat, looking over the nose at the panel below.
-      const eye = f.position.clone().addScaledVector(forward, 0.2).add(new THREE.Vector3(0, 1.05, 0));
+      // Eye a touch higher than the cowling so the raised panel reads
+      // fully below the windscreen instead of behind the nose.
+      const eye = f.position.clone().addScaledVector(forward, 0.2).add(new THREE.Vector3(0, 1.15, 0));
       this.camera.position.copy(eye);
       const target = f.position.clone().addScaledVector(forward, 40);
       this.camera.lookAt(target);

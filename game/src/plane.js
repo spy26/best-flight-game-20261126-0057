@@ -20,9 +20,11 @@ export function buildPlaneMesh() {
   const fuselage = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.55, 5.6, 12), cream);
   fuselage.rotation.x = Math.PI / 2;
   group.add(fuselage);
-  const nose = new THREE.Mesh(new THREE.ConeGeometry(0.9, 1.6, 12), red);
+  // Slimmer, lower nose cone: the old full-height cone filled the
+  // windscreen and hid the middle of the instrument panel.
+  const nose = new THREE.Mesh(new THREE.ConeGeometry(0.72, 1.6, 12), red);
   nose.rotation.x = -Math.PI / 2;
-  nose.position.z = -3.5;
+  nose.position.set(0, -0.28, -3.5);
   group.add(nose);
   const tailCone = new THREE.Mesh(new THREE.ConeGeometry(0.55, 1.6, 10), cream);
   tailCone.rotation.x = Math.PI / 2;
@@ -83,9 +85,11 @@ export function buildPlaneMesh() {
 
   // Lit cockpit panel, visible in cockpit view: gauges drawn on a canvas.
   // Sized to read as a dashboard at the bottom of the view, not a wall.
+  // Raised clear of the cowling: the old low mounting sat inside the
+  // fuselage, so the nose hid the two middle gauges and their labels.
   const panel = makeInstrumentPanel();
-  panel.position.set(0, 0.6, -2.2);
-  panel.rotation.x = -0.35;
+  panel.position.set(0, 1.22, -2.15);
+  panel.rotation.x = -0.5;
   panel.visible = false;
   group.add(panel);
 

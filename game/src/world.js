@@ -39,25 +39,52 @@ export class HarborWorld {
     const scene = this.scene;
     scene.background = new THREE.Color(PALETTE.skyHorizon);
     scene.fog = new THREE.Fog(PALETTE.fog, 500, 2600);
-    // Low golden sun disc on the western horizon.
+    // Gradient sky dome: warm peach at the horizon, deeper blue above,
+    // so the sky has depth instead of one flat wash. Vertex colors on a
+    // back-face sphere the camera sits inside; fog off so it never hazes out.
+    const domeGeo = new THREE.SphereGeometry(3800, 32, 16);
+    const domePos = domeGeo.attributes.position;
+    const domeColors = new Float32Array(domePos.count * 3);
+    const skyTop = new THREE.Color(PALETTE.skyTop);
+    const skyHorizon = new THREE.Color(PALETTE.skyHorizon);
+    const tmpColor = new THREE.Color();
+    for (let i = 0; i < domePos.count; i += 1) {
+      const t = Math.min(1, Math.max(0, domePos.getY(i) / 1400));
+      tmpColor.copy(skyHorizon).lerp(skyTop, t * t);
+      domeColors[i * 3] = tmpColor.r;
+      domeColors[i * 3 + 1] = tmpColor.g;
+      domeColors[i * 3 + 2] = tmpColor.b;
+    }
+    domeGeo.setAttribute('color', new THREE.BufferAttribute(domeColors, 3));
+    const dome = new THREE.Mesh(
+      domeGeo,
+      new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide, fog: false }),
+    );
+    scene.add(dome);
+    // Low golden sun disc on the north-west horizon: far enough west to
+    // stay golden-hour, far enough north to read in the flight views,
+    // which mostly look north. The old due-west spot never entered a frame.
+    // Set ~37° west of north: clear of the cockpit panel's left edge in
+    // the cockpit shot, and clear of the first ring's arc at any approach
+    // distance instead of sitting behind it.
     const sun = new THREE.Mesh(
-      new THREE.CircleGeometry(90, 32),
+      new THREE.CircleGeometry(110, 32),
       new THREE.MeshBasicMaterial({ color: 0xffdf9e, fog: false }),
     );
-    sun.position.set(-1900, 190, -900);
+    sun.position.set(-1587, 220, -2184);
     sun.lookAt(0, 60, 0);
     scene.add(sun);
     // Warm halo around the sun.
     const halo = new THREE.Mesh(
-      new THREE.CircleGeometry(190, 32),
+      new THREE.CircleGeometry(240, 32),
       new THREE.MeshBasicMaterial({
         color: 0xffc06a,
         transparent: true,
-        opacity: 0.28,
+        opacity: 0.32,
         fog: false,
       }),
     );
-    halo.position.set(-1905, 190, -905);
+    halo.position.set(-1592, 220, -2189);
     halo.lookAt(0, 60, 0);
     scene.add(halo);
   }
