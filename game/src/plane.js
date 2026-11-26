@@ -201,7 +201,7 @@ export function updateFlight(state, input, dt, colliders) {
   state.fuel = clamp(state.fuel - fuelDrain, 0, 100);
 
   const control = state.speed < STALL_SPEED ? 0.45 : 1;
-  const pitchRate = (input.pitch + input.mousePitch) * 0.85 * control;
+  const pitchRate = (input.pitch + input.mousePitch) * 0.7 * control;
   const rollRate = (input.roll + input.mouseRoll) * 1.7 * control;
   state.pitch = clamp(state.pitch + pitchRate * dt, -0.62, 0.62);
   state.roll = clamp(state.roll + rollRate * dt, -1.15, 1.15);
@@ -211,7 +211,7 @@ export function updateFlight(state, input, dt, colliders) {
     state.roll *= Math.exp(-0.9 * dt);
   }
   if (Math.abs(input.pitch + input.mousePitch) < 0.05) {
-    state.pitch *= Math.exp(-0.25 * dt);
+    state.pitch *= Math.exp(-0.6 * dt);
   }
 
   // Banked turn plus a little direct rudder from Q/E.
