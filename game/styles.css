@@ -1,0 +1,113 @@
+/* Skyline Harbor — golden-hour glass HUD over the 3D harbor. */
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #1a2430; }
+body { font-family: "Segoe UI", system-ui, sans-serif; color: #f2ede0; }
+#game-canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+.hidden { display: none !important; }
+
+/* ---------- HUD ---------- */
+#hud { position: fixed; inset: 0; pointer-events: none; z-index: 5; }
+#hud-top-left { position: absolute; top: 16px; left: 16px; display: flex; flex-direction: column; gap: 8px; }
+.gauge {
+  background: rgba(12, 20, 30, 0.62);
+  border: 1px solid rgba(255, 201, 60, 0.55);
+  border-left: 4px solid #ffc93c;
+  border-radius: 6px;
+  padding: 6px 12px;
+  min-width: 168px;
+  backdrop-filter: blur(2px);
+}
+.gauge .label { display: block; font-size: 10px; letter-spacing: 2px; color: #ffc93c; }
+.gauge .value { font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; color: #fff; }
+
+#hud-top-center { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); text-align: center; }
+.big-time {
+  font-size: 44px; font-weight: 800; line-height: 1;
+  color: #fff; text-shadow: 0 2px 12px rgba(0, 0, 0, 0.7);
+  font-variant-numeric: tabular-nums;
+}
+.big-time.urgent { color: #ff6a5e; }
+#score-line { font-size: 17px; font-weight: 700; margin-top: 4px; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8); }
+#nextRing { font-size: 14px; color: #ffc93c; font-weight: 700; margin-top: 2px; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8); }
+#beacon { font-size: 13px; color: #e8e8e8; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8); }
+
+#hud-top-right { position: absolute; top: 16px; right: 16px; text-align: center; }
+#minimap { border: 1px solid rgba(255, 201, 60, 0.6); border-radius: 6px; background: rgba(10, 18, 28, 0.72); }
+.map-caption { font-size: 10px; letter-spacing: 2px; color: #ffc93c; margin-top: 3px; }
+
+#hud-bottom-left { position: absolute; left: 16px; bottom: 16px; width: 260px; }
+.bar-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.bar-row span { font-size: 12px; font-weight: 700; width: 76px; text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8); }
+.bar { flex: 1; height: 12px; background: rgba(12, 20, 30, 0.62); border: 1px solid rgba(255, 255, 255, 0.35); border-radius: 6px; overflow: hidden; }
+#throttleFill { height: 100%; width: 65%; background: linear-gradient(90deg, #7fe0ff, #ffc93c); }
+#fuelFill { height: 100%; width: 100%; background: linear-gradient(90deg, #9fe08a, #4aa88a); }
+#fuelFill.low { background: linear-gradient(90deg, #ff6a5e, #ff9a3c); }
+
+#stall {
+  position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%);
+  background: rgba(160, 20, 10, 0.85); border: 2px solid #ff6a5e; border-radius: 8px;
+  color: #fff; font-weight: 800; font-size: 18px; padding: 10px 18px; letter-spacing: 1px;
+  animation: blink 0.6s steps(2) infinite;
+}
+@keyframes blink { 50% { opacity: 0.55; } }
+#toast {
+  position: absolute; left: 50%; bottom: 150px; transform: translateX(-50%);
+  background: rgba(12, 20, 30, 0.78); border: 1px solid #ffc93c; border-radius: 8px;
+  padding: 9px 16px; font-size: 15px; font-weight: 600; white-space: nowrap;
+}
+#hud-help { position: absolute; right: 16px; bottom: 14px; font-size: 12px; color: rgba(255, 255, 255, 0.75); text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8); }
+
+/* ---------- Overlays ---------- */
+.overlay {
+  position: fixed; inset: 0; z-index: 10;
+  display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(ellipse at center, rgba(20, 16, 8, 0.42), rgba(10, 8, 4, 0.78));
+}
+.panel {
+  max-width: 620px; width: calc(100% - 40px);
+  background: rgba(14, 20, 30, 0.88);
+  border: 1px solid rgba(255, 201, 60, 0.65);
+  border-radius: 14px; padding: 28px 34px;
+  text-align: center; box-shadow: 0 12px 48px rgba(0, 0, 0, 0.6);
+}
+.panel h1 {
+  margin: 0; font-size: 46px; letter-spacing: 4px;
+  background: linear-gradient(180deg, #ffe9a8, #ff9a3c);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.tagline { color: #ffc93c; font-weight: 600; margin: 6px 0 14px; }
+.brief { font-size: 15px; line-height: 1.55; color: #e8e4d8; }
+.controls-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 4px 14px;
+  text-align: left; font-size: 13.5px; margin: 16px auto; max-width: 480px;
+}
+.controls-grid b { color: #ffc93c; }
+.big-button {
+  display: block; margin: 12px auto 0; padding: 13px 34px;
+  font-size: 18px; font-weight: 800; letter-spacing: 2px;
+  color: #1a1206; background: linear-gradient(180deg, #ffd76a, #ff9a3c);
+  border: none; border-radius: 10px; cursor: pointer;
+}
+.big-button:hover { filter: brightness(1.1); }
+.big-button.secondary { background: rgba(255, 255, 255, 0.14); color: #f2ede0; font-size: 15px; padding: 10px 26px; border: 1px solid rgba(255, 255, 255, 0.35); }
+.best-line { color: #ffc93c; font-weight: 700; margin-top: 14px; }
+.fine { font-size: 12px; color: rgba(232, 228, 216, 0.6); margin-top: 12px; }
+#overBreakdown { max-width: 420px; margin: 10px auto; text-align: left; }
+.break-row {
+  display: flex; justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14); padding: 6px 2px; font-size: 15px;
+}
+.final-score { font-size: 40px; font-weight: 800; color: #fff; margin: 10px 0 2px; }
+.corner-button {
+  position: fixed; right: 16px; bottom: 16px; z-index: 8;
+  width: 38px; height: 38px; border-radius: 50%;
+  background: rgba(12, 20, 30, 0.7); color: #ffc93c; font-size: 20px; font-weight: 800;
+  border: 1px solid rgba(255, 201, 60, 0.6); cursor: pointer;
+}
+#hud:not(.hidden) ~ .corner-button { bottom: 52px; }
+
+/* Title screenshot: panel docks left so the plane and runway read on the right. */
+body.shot-title #menu { justify-content: flex-start; }
+body.shot-title #menu .panel { margin-left: 40px; max-width: 470px; text-align: left; }
+body.shot-title #menu .panel h1 { font-size: 36px; }
+body.shot-title #menu .controls-grid { margin: 16px 0; }

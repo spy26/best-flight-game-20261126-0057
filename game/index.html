@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SKYLINE HARBOR — Golden-Hour Courier Run</title>
+<link rel="stylesheet" href="styles.css">
+<script src="vendor/three.min.js"></script>
+</head>
+<body>
+<canvas id="game-canvas"></canvas>
+
+<div id="hud" class="hidden">
+  <div id="hud-top-left">
+    <div class="gauge"><span class="label">ALTITUDE</span><span id="alt" class="value">0 ft</span></div>
+    <div class="gauge"><span class="label">AIRSPEED</span><span id="speed" class="value">0 kt</span></div>
+    <div class="gauge"><span class="label">HEADING</span><span id="heading" class="value">000° N</span></div>
+  </div>
+  <div id="hud-top-center">
+    <div id="time" class="big-time">3:00</div>
+    <div id="score-line">SCORE <span id="score">0</span> &nbsp;·&nbsp; RINGS <span id="rings">0 / 8</span> &nbsp;·&nbsp; <span id="best">BEST 0</span></div>
+    <div id="nextRing">NEXT: Runway Gate</div>
+    <div id="beacon">◈ 0 m</div>
+  </div>
+  <div id="hud-top-right">
+    <canvas id="minimap" width="168" height="168"></canvas>
+    <div class="map-caption">HARBOR MAP</div>
+  </div>
+  <div id="hud-bottom-left">
+    <div class="bar-row"><span id="throttleLabel">THR 65%</span><div class="bar"><div id="throttleFill"></div></div></div>
+    <div class="bar-row"><span id="fuelLabel">FUEL 100%</span><div class="bar"><div id="fuelFill"></div></div></div>
+  </div>
+  <div id="stall" class="hidden">⚠ STALL — NOSE DOWN, ADD THROTTLE ⚠</div>
+  <div id="toast" class="hidden"></div>
+  <div id="hud-help">C view · P pause · M sound · H help</div>
+</div>
+
+<div id="menu" class="overlay">
+  <div class="panel">
+    <h1>SKYLINE HARBOR</h1>
+    <p class="tagline">Golden-hour courier run over the harbor city</p>
+    <p class="brief">Fly the glowing rings in order — each one scores 100 points, adds 10 seconds
+      and tops up your fuel. Then bring her home: land on the runway for a landing bonus
+      before the three minutes run out. Watch the fuel, mind the skyline, and never trust
+      a stall below 50 knots.</p>
+    <div class="controls-grid">
+      <span><b>↑ / ↓</b> or <b>W / S</b></span><span>Pitch</span>
+      <span><b>← / →</b> or <b>A / D</b></span><span>Roll / banked turn</span>
+      <span><b>Q / E</b></span><span>Rudder yaw</span>
+      <span><b>Shift / Ctrl</b></span><span>Throttle up / down</span>
+      <span><b>Space</b></span><span>Boost</span>
+      <span><b>Mouse</b></span><span>Fine aim (click to lock)</span>
+      <span><b>C</b></span><span>Cockpit / chase view</span>
+      <span><b>P</b> · <b>R</b> · <b>M</b> · <b>H</b></span><span>Pause · Restart · Sound · Help</span>
+    </div>
+    <button id="startButton" class="big-button">TAKE OFF</button>
+    <p id="menuBest" class="best-line">No flights logged yet — make this one count.</p>
+    <p class="fine">Best score saved on this machine. No network, no downloads — the whole harbor lives in this page.</p>
+  </div>
+</div>
+
+<div id="pauseScreen" class="overlay hidden">
+  <div class="panel">
+    <h1>PAUSED</h1>
+    <p class="tagline">Holding pattern over the harbor.</p>
+    <button id="resumeButton" class="big-button">RESUME</button>
+    <button id="restartButton" class="big-button secondary">RESTART RUN</button>
+    <button id="menuButton" class="big-button secondary">MAIN MENU</button>
+  </div>
+</div>
+
+<div id="overScreen" class="overlay hidden">
+  <div class="panel">
+    <h1 id="overTitle">LANDED</h1>
+    <p id="overReason" class="tagline"></p>
+    <div id="overBreakdown"></div>
+    <div id="overScore" class="final-score">0 pts</div>
+    <div id="overBest" class="best-line"></div>
+    <button id="overRestartButton" class="big-button">FLY AGAIN (R)</button>
+    <button id="overMenuButton" class="big-button secondary">MAIN MENU</button>
+  </div>
+</div>
+
+<div id="helpScreen" class="overlay hidden">
+  <div class="panel">
+    <h1>HOW TO FLY</h1>
+    <p class="brief">Throttle with <b>Shift / Ctrl</b>. Pitch with <b>↑ / ↓</b> or <b>W / S</b>, roll with
+      <b>← / →</b> or <b>A / D</b> — a banked turn steers the plane. <b>Q / E</b> add rudder.
+      <b>Space</b> boosts and drinks fuel. Click the game to lock the mouse for fine aim.
+      Below 50 knots she stalls: nose drops, controls go soft — add throttle and level out.
+      Rings pay 100 points, 10 seconds and fuel. Land on the runway, slow and lined up,
+      to bank the landing bonus. Fuel empty means gliding home — or swimming.</p>
+    <button id="closeHelpButton" class="big-button">CLOSE (H)</button>
+  </div>
+</div>
+
+<button id="helpButton" class="corner-button" title="Help (H)">?</button>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>
