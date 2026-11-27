@@ -5,6 +5,31 @@ body { font-family: "Segoe UI", system-ui, sans-serif; color: #f2ede0; }
 #game-canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
 .hidden { display: none !important; }
 
+/* ---------- Sun glare (cockpit view) ---------- */
+#sunGlare { position: fixed; inset: 0; pointer-events: none; z-index: 4; overflow: hidden; }
+#sunGlare .glare-wash {
+  position: absolute; inset: 0;
+  background: linear-gradient(115deg, rgba(255, 160, 60, 0.20), rgba(255, 120, 40, 0.06) 55%, rgba(255, 150, 60, 0.14));
+}
+#sunGlare .glare-halo {
+  position: absolute; width: 900px; height: 900px;
+  left: var(--gx, 22%); top: var(--gy, 22%); transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 170, 70, 0.28) 0%, rgba(255, 140, 40, 0.10) 45%, transparent 70%);
+}
+#sunGlare .glare-streak {
+  position: absolute; width: 1100px; height: 10px;
+  left: var(--gx, 22%); top: var(--gy, 22%); transform: translate(-50%, -50%) rotate(-8deg);
+  background: linear-gradient(90deg, transparent, rgba(255, 220, 150, 0.55), transparent);
+  border-radius: 5px;
+}
+#sunGlare .glare-core {
+  position: absolute; width: 340px; height: 340px;
+  left: var(--gx, 22%); top: var(--gy, 22%); transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 250, 220, 0.95) 0%, rgba(255, 210, 110, 0.55) 35%, rgba(255, 150, 50, 0.18) 60%, transparent 70%);
+}
+
 /* ---------- HUD ---------- */
 #hud { position: fixed; inset: 0; pointer-events: none; z-index: 5; }
 #hud-top-left { position: absolute; top: 16px; left: 16px; display: flex; flex-direction: column; gap: 8px; }
@@ -38,6 +63,8 @@ body { font-family: "Segoe UI", system-ui, sans-serif; color: #f2ede0; }
 #hud-bottom-left { position: absolute; left: 16px; bottom: 16px; width: 260px; }
 .bar-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
 .bar-row span { font-size: 12px; font-weight: 700; width: 76px; text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8); }
+.bar-row.text-row span { width: auto; }
+.bar-row.text-row span + span { margin-left: 14px; color: #ffc93c; }
 .bar { flex: 1; height: 12px; background: rgba(12, 20, 30, 0.62); border: 1px solid rgba(255, 255, 255, 0.35); border-radius: 6px; overflow: hidden; }
 #throttleFill { height: 100%; width: 65%; background: linear-gradient(90deg, #7fe0ff, #ffc93c); }
 #fuelFill { height: 100%; width: 100%; background: linear-gradient(90deg, #9fe08a, #4aa88a); }

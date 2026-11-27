@@ -1,10 +1,21 @@
 // Skyline Harbor — the courier plane: its built-up mesh and its flight model.
 // One clear job: how the aircraft looks, and how it flies, stalls and lands.
 
-import { clamp, dampFactor, groundHeight, isOverRunway, isOverWater, SPAWN, STALL_SPEED, MAX_SPEED } from './config.js';
+import {
+  clamp,
+  dampFactor,
+  groundHeight,
+  isOverRunway,
+  isOverWater,
+  SPAWN,
+  MAX_SPEED,
+  stallSpeedForFlaps,
+} from './config.js';
+import { buildCockpit } from './cockpit.js';
 
 // Build the propeller courier from primitives: cream fuselage, red trim,
-// glass canopy, spinning prop, wingtip lights and a lit cockpit panel.
+// glass canopy, spinning prop, wingtip lights and the MSFS-style cockpit
+// (wide panel with live PFD / ND / FMC / EICAS, throttle quadrant, yoke).
 export function buildPlaneMesh() {
   const group = new THREE.Group();
   group.rotation.order = 'YXZ';
@@ -83,15 +94,11 @@ export function buildPlaneMesh() {
     group.add(wheel);
   }
 
-  // Lit cockpit panel, visible in cockpit view: gauges drawn on a canvas.
-  // Sized to read as a dashboard at the bottom of the view, not a wall.
-  // Raised clear of the cowling: the old low mounting sat inside the
-  // fuselage, so the nose hid the two middle gauges and their labels.
-  const panel = makeInstrumentPanel();
-  panel.position.set(0, 1.22, -2.15);
-  panel.rotation.x = -0.5;
-  panel.visible = false;
-  group.add(panel);
+  // The cockpit: wide airliner panel with live screens, throttle quadrant
+  // and yoke. Hidden in chase view, shown in cockpit view (see main.js).
+  const cockpit = buildCockpit();
+  cockpit.group.visible = false;
+  group.add(cockpit.group);
 
   // Translucent prop disc: the spinning blur a real prop reads as.
   const disc = new THREE.Mesh(
@@ -107,63 +114,7 @@ export function buildPlaneMesh() {
   disc.position.set(0, 0, -4.45);
   group.add(disc);
 
-  return { group, propeller: prop, panel, canopy };
-}
-
-// Canvas-drawn instrument faces: airspeed, altitude, attitude and compass.
-export function makeInstrumentPanel() {
-  const canvas = document.createElement('canvas');
-  canvas.width = 512;
-  canvas.height = 160;
-  const g = canvas.getContext('2d');
-  g.fillStyle = '#101418';
-  g.fillRect(0, 0, 512, 160);
-  g.strokeStyle = '#3a4550';
-  g.lineWidth = 4;
-  g.strokeRect(4, 4, 504, 152);
-  const gauges = [
-    { x: 80, label: 'AIRSPEED', color: '#7fe0ff' },
-    { x: 200, label: 'ALTITUDE', color: '#ffd27a' },
-    { x: 320, label: 'ATTITUDE', color: '#9fe08a' },
-    { x: 436, label: 'HEADING', color: '#ff9a7a' },
-  ];
-  for (const gauge of gauges) {
-    g.beginPath();
-    g.arc(gauge.x, 66, 52, 0, Math.PI * 2);
-    g.fillStyle = '#0c1a24';
-    g.fill();
-    g.strokeStyle = gauge.color;
-    g.lineWidth = 3;
-    g.stroke();
-    for (let i = 0; i <= 10; i += 1) {
-      const a = Math.PI * 0.75 + (i / 10) * Math.PI * 1.5;
-      g.beginPath();
-      g.moveTo(gauge.x + Math.cos(a) * 44, 66 + Math.sin(a) * 44);
-      g.lineTo(gauge.x + Math.cos(a) * 52, 66 + Math.sin(a) * 52);
-      g.stroke();
-    }
-    g.beginPath();
-    g.moveTo(gauge.x, 66);
-    g.lineTo(gauge.x + 34, 66 - 30);
-    g.strokeStyle = '#ffffff';
-    g.lineWidth = 3;
-    g.stroke();
-    g.fillStyle = '#ffb347';
-    g.beginPath();
-    g.arc(gauge.x, 66, 5, 0, Math.PI * 2);
-    g.fill();
-    g.fillStyle = '#e8e8e8';
-    g.font = 'bold 15px monospace';
-    g.textAlign = 'center';
-    g.fillText(gauge.label, gauge.x, 146);
-  }
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  const panel = new THREE.Mesh(
-    new THREE.PlaneGeometry(2.4, 0.75),
-    new THREE.MeshBasicMaterial({ map: texture }),
-  );
-  return panel;
+  return { group, propeller: prop, panel: cockpit.group, canopy, cockpit };
 }
 
 export function createFlightState() {
@@ -181,6 +132,9 @@ export function createFlightState() {
     crashed: false,
     crashReason: '',
     landed: false,
+    // Instrument flying: pitch trim (T/G, -1..1) and flaps (F: 0 UP, 1 APPR, 2 FULL).
+    trim: 0,
+    flaps: 0,
   };
 }
 
@@ -191,7 +145,8 @@ export function resetFlight(state) {
 }
 
 // One physics step. Returns 'flying', 'crashed' or 'landed'.
-// input: { pitch, roll, yaw, throttleUp, throttleDown, boost, mousePitch, mouseRoll }
+// input: { pitch, roll, yaw, throttleUp, throttleDown, boost, mousePitch,
+//          mouseRoll, trimUp, trimDown }
 export function updateFlight(state, input, dt, colliders) {
   if (state.crashed || state.landed) return state.landed ? 'landed' : 'crashed';
   const prevY = state.position.y;
@@ -199,23 +154,33 @@ export function updateFlight(state, input, dt, colliders) {
   if (input.throttleUp) state.throttle = clamp(state.throttle + 0.55 * dt, 0, 1);
   if (input.throttleDown) state.throttle = clamp(state.throttle - 0.55 * dt, 0, 1);
 
+  // Trim: T noses up, G noses down. It shifts the hands-off pitch attitude,
+  // so a trimmed plane holds its climb or descent without holding the stick.
+  if (input.trimUp) state.trim = clamp(state.trim + 0.5 * dt, -1, 1);
+  if (input.trimDown) state.trim = clamp(state.trim - 0.5 * dt, -1, 1);
+  const trimPitch = state.trim * 0.22;
+
   const hasFuel = state.fuel > 0;
   state.boosting = Boolean(input.boost && hasFuel && state.throttle > 0.3);
-  const fuelDrain = (state.throttle * 1.6 + (state.boosting ? 7 : 0)) * dt;
+  const fuelDrain =
+    (state.throttle * 1.6 + (state.boosting ? 7 : 0) + state.flaps * 0.3) * dt;
   state.fuel = clamp(state.fuel - fuelDrain, 0, 100);
 
-  const control = state.speed < STALL_SPEED ? 0.45 : 1;
+  // Flaps trade speed for lift: each step lowers the stall speed and adds drag.
+  const stall = stallSpeedForFlaps(state.flaps);
+  const control = state.speed < stall ? 0.45 : 1;
   const pitchRate = (input.pitch + input.mousePitch) * 0.7 * control;
   const rollRate = (input.roll + input.mouseRoll) * 1.7 * control;
   state.pitch = clamp(state.pitch + pitchRate * dt, -0.62, 0.62);
   state.roll = clamp(state.roll + rollRate * dt, -1.15, 1.15);
 
-  // Gentle auto-level: hands off the stick and she settles wings-level.
+  // Gentle auto-level: hands off the stick and she settles wings-level,
+  // at the pitch the trim asks for.
   if (Math.abs(input.roll + input.mouseRoll) < 0.05) {
     state.roll *= Math.exp(-0.9 * dt);
   }
   if (Math.abs(input.pitch + input.mousePitch) < 0.05) {
-    state.pitch *= Math.exp(-0.6 * dt);
+    state.pitch += (trimPitch - state.pitch) * dampFactor(0.6, dt);
   }
 
   // Banked turn plus a little direct rudder from Q/E.
@@ -226,11 +191,12 @@ export function updateFlight(state, input, dt, colliders) {
   let targetSpeed = 16 + state.throttle * 80;
   if (state.boosting) targetSpeed += 26;
   if (!hasFuel) targetSpeed = 16;
+  targetSpeed -= state.flaps * 6;
   targetSpeed -= Math.sin(state.pitch) * 34;
   targetSpeed = clamp(targetSpeed, 0, MAX_SPEED + 26);
   state.speed += (targetSpeed - state.speed) * dampFactor(0.55, dt);
 
-  state.stalled = state.speed < STALL_SPEED;
+  state.stalled = state.speed < stall;
   if (state.stalled) {
     // The nose drops in a stall; hold speed and she recovers.
     state.pitch = clamp(state.pitch - 0.3 * dt, -0.62, 0.62);

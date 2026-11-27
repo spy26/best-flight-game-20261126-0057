@@ -12,6 +12,7 @@ export class FlightInput {
     this.onToggleView = null;
     this.onToggleMute = null;
     this.onToggleHelp = null;
+    this.onFlaps = null;
     this.onAnyGesture = null;
     this.onStart = null;
     this.canvas = null;
@@ -26,6 +27,7 @@ export class FlightInput {
       if (event.code === 'KeyP') this.onPause?.();
       if (event.code === 'KeyR') this.onRestart?.();
       if (event.code === 'KeyC') this.onToggleView?.();
+      if (event.code === 'KeyF') this.onFlaps?.();
       if (event.code === 'KeyM') this.onToggleMute?.();
       if (event.code === 'KeyH') this.onToggleHelp?.();
       if (event.code === 'Enter' || event.code === 'Space') this.onStart?.();
@@ -73,6 +75,8 @@ export class FlightInput {
       throttleUp: this.isDown('ShiftLeft') || this.isDown('ShiftRight'),
       throttleDown: this.isDown('ControlLeft') || this.isDown('ControlRight'),
       boost: this.isDown('Space'),
+      trimUp: this.isDown('KeyT'),
+      trimDown: this.isDown('KeyG'),
       mousePitch: this.mousePitch,
       mouseRoll: this.mouseRoll,
     };

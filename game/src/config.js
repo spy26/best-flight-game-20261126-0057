@@ -11,6 +11,17 @@ export const STALL_SPEED = 26;
 export const MAX_SPEED = 96;
 export const BEST_SCORE_KEY = 'skyline-harbor-best';
 
+// Flaps: UP / APPR / FULL. Each step lowers the stall speed (more lift)
+// and adds drag, so a slow, flaps-down approach is the safe way home.
+export const FLAP_NAMES = ['UP', 'APPR', 'FULL'];
+export function stallSpeedForFlaps(flaps) {
+  return [26, 22, 18][flaps] ?? 26;
+}
+
+// Low golden sun on the north-west horizon — the glare source for the
+// cockpit view. Same position the world builder hangs the sun disc at.
+export const SUN_POS = { x: -1587, y: 220, z: -2184 };
+
 // The runway sits on the flat apron south of downtown, heading north (-Z).
 export const RUNWAY = { x: 0, zMin: -100, zMax: 300, halfWidth: 15 };
 export const SPAWN = { x: 0, y: 55, z: 360, heading: 0, pitch: 0, roll: 0 };

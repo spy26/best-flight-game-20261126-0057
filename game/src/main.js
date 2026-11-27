@@ -3,14 +3,17 @@
 
 import {
   BEST_SCORE_KEY,
+  FLAP_NAMES,
   RING_COURSE,
   RING_POINTS,
   RING_RADIUS,
   RING_TIME_BONUS,
   RING_FUEL_BONUS,
   RUN_TIME_SECONDS,
+  SUN_POS,
   clamp,
   formatTime,
+  stallSpeedForFlaps,
 } from './config.js';
 import { HarborWorld } from './world.js';
 import {
@@ -20,6 +23,7 @@ import {
   updateFlight,
   posePlane,
 } from './plane.js';
+import { updateCockpit } from './cockpit.js';
 import { FlightInput } from './input.js';
 import { SkyHud } from './hud.js';
 import { SkyAudio } from './audio.js';
@@ -53,6 +57,11 @@ class SkylineHarborGame {
     this.best = Number.parseInt(window.localStorage.getItem(BEST_SCORE_KEY) || '0', 10) || 0;
     this.landingBonus = 0;
     this.timeBonus = 0;
+    this.onApproach = false;
+    this.locDev = 0;
+    this.gsDev = 0;
+    this.approachAnnounced = false;
+    this.glareEl = document.getElementById('sunGlare');
     this.lastTime = performance.now();
     this.cameraPos = new THREE.Vector3(0, 70, 420);
     this.beacon = this.buildBeacon();
@@ -108,6 +117,14 @@ class SkylineHarborGame {
       const muted = this.audio.toggleMute();
       this.hud.toast(muted ? 'Sound muted (M)' : 'Sound on (M)');
     };
+    this.input.onFlaps = () => {
+      if (this.phase === 'playing' || this.phase === 'paused') {
+        this.flight.flaps = (this.flight.flaps + 1) % FLAP_NAMES.length;
+        this.hud.toast(
+          `Flaps ${FLAP_NAMES[this.flight.flaps]} — stall ${Math.round(stallSpeedForFlaps(this.flight.flaps) * 1.94)} kt, more drag`,
+        );
+      }
+    };
     this.input.onToggleHelp = () => {
       const help = document.getElementById('helpScreen');
       help.classList.toggle('hidden');
@@ -143,6 +160,10 @@ class SkylineHarborGame {
     this.timeLeft = RUN_TIME_SECONDS;
     this.landingBonus = 0;
     this.timeBonus = 0;
+    this.onApproach = false;
+    this.locDev = 0;
+    this.gsDev = 0;
+    this.approachAnnounced = false;
     this.cameraMode = 'chase';
     this.plane.panel.visible = false;
     this.phase = 'playing';
@@ -229,6 +250,65 @@ class SkylineHarborGame {
       best: this.best,
       isBest,
     });
+  }
+
+  // Final approach: lined up on the runway centerline, low, northbound.
+  // Drives the ILS diamonds on the PFD and the APPR annunciator.
+  updateApproach() {
+    const f = this.flight;
+    const headingDeg = ((-f.heading * 180) / Math.PI % 360 + 360) % 360;
+    const aligned = headingDeg < 30 || headingDeg > 330;
+    this.onApproach =
+      aligned &&
+      Math.abs(f.position.x) < 150 &&
+      f.position.z > -100 &&
+      f.position.z < 350 &&
+      f.position.y < 280;
+    if (this.onApproach) {
+      this.locDev = clamp(f.position.x / 150, -1, 1);
+      const idealY = 2.2 + (f.position.z + 100) * 0.0524;
+      this.gsDev = clamp((f.position.y - idealY) / 60, -1, 1);
+      if (!this.approachAnnounced) {
+        this.approachAnnounced = true;
+        this.hud.toast('FINAL APPROACH — fly toward the magenta ILS diamonds.');
+      }
+    } else {
+      this.approachAnnounced = false;
+    }
+  }
+
+  // Golden-hour sun glare through the windshield, cockpit view only.
+  // The DOM flare tracks the real sun's projected screen position and
+  // brightens as the nose swings toward it; a warm wash stays on the
+  // panel even when the sun itself is just out of frame.
+  updateGlare() {
+    const el = this.glareEl;
+    if (this.cameraMode !== 'cockpit' || this.phase === 'menu' || this.phase === 'over') {
+      el.style.opacity = '0';
+      return;
+    }
+    const f = this.flight;
+    const cp = Math.cos(f.pitch);
+    const forward = new THREE.Vector3(
+      -Math.sin(f.heading) * cp,
+      Math.sin(f.pitch),
+      -Math.cos(f.heading) * cp,
+    );
+    const sunDir = new THREE.Vector3(SUN_POS.x, SUN_POS.y, SUN_POS.z)
+      .sub(this.camera.position)
+      .normalize();
+    const facing = forward.dot(sunDir);
+    this.camera.updateMatrixWorld();
+    const p = new THREE.Vector3(SUN_POS.x, SUN_POS.y, SUN_POS.z).project(this.camera);
+    const inFrame = p.z < 1 && Math.abs(p.x) < 1.2 && Math.abs(p.y) < 1.2;
+    const glare = inFrame
+      ? clamp((facing - 0.2) / 0.7, 0, 1)
+      : clamp((facing - 0.55) / 0.45, 0, 0.5);
+    el.style.opacity = String(0.3 + glare * 0.7);
+    if (inFrame) {
+      el.style.setProperty('--gx', `${((p.x * 0.5 + 0.5) * window.innerWidth).toFixed(0)}px`);
+      el.style.setProperty('--gy', `${((-p.y * 0.5 + 0.5) * window.innerHeight).toFixed(0)}px`);
+    }
   }
 
   updateCamera(dt) {
@@ -328,7 +408,7 @@ class SkylineHarborGame {
       } else if (this.timeLeft <= 0) {
         this.timeLeft = 0;
         this.endRun('TIME UP', 'Three minutes gone — the harbor keeps its schedule.');
-      } else if (this.flight.fuel <= 0 && this.flight.speed < STALL_SPEED) {
+      } else if (this.flight.fuel <= 0 && this.flight.speed < stallSpeedForFlaps(this.flight.flaps)) {
         this.endRun('OUT OF FUEL', 'The tank ran dry over the city. Rings top the tank up.');
       }
       this.audio.setFlight(this.flight.throttle, this.flight.speed / 96, this.flight.boosting);
@@ -349,7 +429,14 @@ class SkylineHarborGame {
     this.world.highlightRing(this.nextRingIndex, time);
     this.updateCamera(this.phase === 'playing' || this.phase === 'menu' ? dt : 0.016);
     this.updateBeacon(time);
-    if (this.phase === 'playing') this.hud.update(this.flight, this);
+    if (this.phase === 'playing') {
+      this.updateApproach();
+      this.hud.update(this.flight, this);
+    }
+    this.updateGlare();
+    if (this.plane.panel.visible) {
+      updateCockpit(this.plane.cockpit, this.flight, this, dt, time);
+    }
     this.renderer.render(this.scene, this.camera);
   }
 

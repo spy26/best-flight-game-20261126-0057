@@ -10,6 +10,14 @@
 <body>
 <canvas id="game-canvas"></canvas>
 
+<!-- Golden-hour sun glare through the windshield (cockpit view only). -->
+<div id="sunGlare" style="opacity: 0">
+  <div class="glare-wash"></div>
+  <div class="glare-halo"></div>
+  <div class="glare-streak"></div>
+  <div class="glare-core"></div>
+</div>
+
 <div id="hud" class="hidden">
   <div id="hud-top-left">
     <div class="gauge"><span class="label">ALTITUDE</span><span id="alt" class="value">0 ft</span></div>
@@ -29,10 +37,11 @@
   <div id="hud-bottom-left">
     <div class="bar-row"><span id="throttleLabel">THR 65%</span><div class="bar"><div id="throttleFill"></div></div></div>
     <div class="bar-row"><span id="fuelLabel">FUEL 100%</span><div class="bar"><div id="fuelFill"></div></div></div>
+    <div class="bar-row text-row"><span id="trimLabel">TRIM +0.00</span><span id="flapsLabel">FLAPS UP</span></div>
   </div>
   <div id="stall" class="hidden">⚠ STALL — NOSE DOWN, ADD THROTTLE ⚠</div>
   <div id="toast" class="hidden"></div>
-  <div id="hud-help">C view · P pause · M sound · H help</div>
+  <div id="hud-help">C view · F flaps · T/G trim · P pause · M sound · H help</div>
 </div>
 
 <div id="menu" class="overlay">
@@ -48,6 +57,8 @@
       <span><b>← / →</b> or <b>A / D</b></span><span>Roll / banked turn</span>
       <span><b>Q / E</b></span><span>Rudder yaw</span>
       <span><b>Shift / Ctrl</b></span><span>Throttle up / down</span>
+      <span><b>F</b></span><span>Flaps UP / APPR / FULL</span>
+      <span><b>T / G</b></span><span>Pitch trim up / down</span>
       <span><b>Space</b></span><span>Boost</span>
       <span><b>Mouse</b></span><span>Fine aim (click to lock)</span>
       <span><b>C</b></span><span>Cockpit / chase view</span>
@@ -86,8 +97,14 @@
     <h1>HOW TO FLY</h1>
     <p class="brief">Throttle with <b>Shift / Ctrl</b>. Pitch with <b>↑ / ↓</b> or <b>W / S</b>, roll with
       <b>← / →</b> or <b>A / D</b> — a banked turn steers the plane. <b>Q / E</b> add rudder.
-      <b>Space</b> boosts and drinks fuel. Click the game to lock the mouse for fine aim.
-      Below 50 knots she stalls: nose drops, controls go soft — add throttle and level out.
+      <b>Space</b> boosts and drinks fuel. <b>F</b> cycles the flaps (UP / APPR / FULL) — flaps
+      lower the stall speed and add drag, so a slow flaps-down approach is the safe way to land.
+      <b>T / G</b> trim the pitch so she holds a climb or descent hands-off. In the cockpit
+      (<b>C</b>) fly by the instruments: PFD for attitude, speed and altitude, ND for the
+      heading rose and the ring course, FMC for the route and fuel at each gate. On final
+      approach the PFD shows magenta ILS diamonds — fly toward them. Click the game to lock
+      the mouse for fine aim. Below the flaps stall speed she stalls: nose drops, controls
+      go soft — add throttle and level out.
       Rings pay 100 points, 10 seconds and fuel. Land on the runway, slow and lined up,
       to bank the landing bonus. Fuel empty means gliding home — or swimming.</p>
     <button id="closeHelpButton" class="big-button">CLOSE (H)</button>

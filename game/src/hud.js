@@ -1,13 +1,14 @@
 // Skyline Harbor — HUD, minimap and the menu / pause / game-over screens.
 // One clear job: everything the pilot reads, drawn from the game state.
 
-import { RING_COURSE, RUNWAY, formatHeading, formatTime } from './config.js';
+import { FLAP_NAMES, RING_COURSE, RUNWAY, formatHeading, formatTime } from './config.js';
 
 export class SkyHud {
   constructor() {
     this.el = {};
     const ids = [
       'hud', 'alt', 'speed', 'heading', 'throttleFill', 'throttleLabel',
+      'trimLabel', 'flapsLabel',
       'score', 'time', 'rings', 'fuelFill', 'fuelLabel', 'best', 'stall',
       'nextRing', 'beacon', 'minimap', 'toast',
       'menu', 'pauseScreen', 'overScreen', 'helpScreen',
@@ -85,6 +86,8 @@ export class SkyHud {
     this.el.fuelFill.style.width = `${Math.round(state.fuel)}%`;
     this.el.fuelLabel.textContent = `FUEL ${Math.round(state.fuel)}%`;
     this.el.fuelFill.classList.toggle('low', state.fuel < 25);
+    this.el.trimLabel.textContent = `TRIM ${state.trim >= 0 ? '+' : ''}${state.trim.toFixed(2)}`;
+    this.el.flapsLabel.textContent = `FLAPS ${FLAP_NAMES[state.flaps]}`;
     this.el.score.textContent = String(game.score);
     this.el.time.textContent = formatTime(game.timeLeft);
     this.el.time.classList.toggle('urgent', game.timeLeft < 30);

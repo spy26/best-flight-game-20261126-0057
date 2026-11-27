@@ -54,13 +54,18 @@ export function applyShot(shot, game) {
     game.timeLeft = 142;
   } else if (shot === 3) {
     const ring = RING_COURSE[0];
-    state.position.set(ring.x, ring.y, ring.z + 46);
-    state.heading = 0;
+    // 85 m out and 26 m below the gate, so the ring reads big above the
+    // panel instead of hiding behind it. Nose 18° WEST of north (positive
+    // heading in this game's convention): the low sun sits left of the
+    // windscreen, the first ring right.
+    state.position.set(ring.x, ring.y - 26, ring.z + 85);
+    state.heading = deg(18);
     state.pitch = 0.02;
     state.roll = -0.05;
     state.speed = 62;
     state.throttle = 0.7;
     state.fuel = 88;
+    state.flaps = 1;
     game.cameraMode = 'cockpit';
     game.shotCamera = null;
     game.phase = 'playing';
