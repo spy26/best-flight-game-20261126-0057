@@ -1,7 +1,7 @@
 // Skyline Harbor — HUD, minimap and the menu / pause / game-over screens.
 // One clear job: everything the pilot reads, drawn from the game state.
 
-import { FLAP_NAMES, RING_COURSE, RUNWAY, formatHeading, formatTime } from './config.js';
+import { FLAP_NAMES, RING_COURSE, RUNWAY, computeWarnings, formatHeading, formatTime } from './config.js';
 
 export class SkyHud {
   constructor() {
@@ -10,7 +10,7 @@ export class SkyHud {
       'hud', 'alt', 'speed', 'heading', 'throttleFill', 'throttleLabel',
       'trimLabel', 'flapsLabel',
       'score', 'time', 'rings', 'fuelFill', 'fuelLabel', 'best', 'stall',
-      'nextRing', 'beacon', 'minimap', 'toast',
+      'nextRing', 'beacon', 'caution', 'minimap', 'toast',
       'menu', 'pauseScreen', 'overScreen', 'helpScreen',
       'overTitle', 'overReason', 'overBreakdown', 'overScore', 'overBest',
       'menuBest', 'menuScore',
@@ -18,6 +18,7 @@ export class SkyHud {
     for (const id of ids) this.el[id] = document.getElementById(id);
     this.mapCtx = this.el.minimap.getContext('2d');
     this.toastTimer = 0;
+    this.lastCaution = '';
   }
 
   showMenu(best) {
@@ -94,6 +95,16 @@ export class SkyHud {
     this.el.rings.textContent = `${game.ringsHit} / ${RING_COURSE.length}`;
     this.el.best.textContent = `BEST ${game.best}`;
     this.el.stall.classList.toggle('hidden', !state.stalled);
+    // Caution line, so the panel warnings read in chase view too. The DOM
+    // only changes when the active set changes — no per-frame reflow.
+    const warnings = computeWarnings(state);
+    const cautionText = warnings.any ? `⚠ ${warnings.labels.join('  ·  ')}` : '';
+    if (cautionText !== this.lastCaution) {
+      this.lastCaution = cautionText;
+      this.el.caution.textContent = cautionText;
+      this.el.caution.classList.toggle('hidden', !warnings.any);
+      this.el.caution.classList.toggle('critical', warnings.nearStall || warnings.overspeed);
+    }
     const ring = RING_COURSE[game.nextRingIndex];
     this.el.nextRing.textContent = `NEXT: ${ring.name}`;
     const dx = ring.x - state.position.x;

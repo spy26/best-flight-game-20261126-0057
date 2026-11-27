@@ -12,6 +12,7 @@ import {
   RING_COURSE,
   RUNWAY,
   clamp,
+  computeWarnings,
   formatHeading,
   formatTime,
   stallSpeedForFlaps,
@@ -713,6 +714,45 @@ function drawEICAS(g, flight, time) {
   glassSheen(g, W, H);
 }
 
+// ---------------------------------------------------------- annunciator ----
+// Master caution + warning lamp strip: four airliner-style annunciator
+// lamps in a row — MASTER CAUTION (amber, lit whenever any warning is
+// active), LOW FUEL (amber), NEAR STALL (red) and OVERSPEED (red). Lit
+// lamps are solid colour with dark legends; unlit lamps stay dim outlines.
+// Red lamps flash at 2 Hz while active, amber lamps burn steady.
+function drawAnnunciator(g, warnings, time) {
+  const W = 768;
+  const H = 56;
+  g.clearRect(0, 0, W, H);
+  g.fillStyle = '#0a0d10';
+  g.fillRect(0, 0, W, H);
+  const lamps = [
+    { label: 'MASTER CAUTION', w: 240, active: warnings.any, color: '#ffb347', flash: false },
+    { label: 'LOW FUEL', w: 176, active: warnings.lowFuel, color: '#ffb347', flash: false },
+    { label: 'NEAR STALL', w: 176, active: warnings.nearStall, color: '#ff5a4e', flash: true },
+    { label: 'OVERSPEED', w: 176, active: warnings.overspeed, color: '#ff5a4e', flash: true },
+  ];
+  let x = 0;
+  g.font = 'bold 20px monospace';
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  for (const lamp of lamps) {
+    const lit = lamp.active && (!lamp.flash || Math.floor(time * 2) % 2 === 0);
+    g.fillStyle = lit ? lamp.color : '#161b20';
+    g.strokeStyle = lit ? lamp.color : '#2e353c';
+    g.lineWidth = 2;
+    roundRect(g, x + 3, 4, lamp.w - 6, H - 8, 5);
+    g.fill();
+    g.stroke();
+    g.fillStyle = lit ? '#1a1206' : '#4a525a';
+    g.fillText(lamp.label, x + lamp.w / 2, H / 2 + 1);
+    x += lamp.w;
+  }
+  g.strokeStyle = '#3a4550';
+  g.lineWidth = 2;
+  g.strokeRect(1, 1, W - 2, H - 2);
+}
+
 // ------------------------------------------------------- static panel -----
 // The panel face itself: dark metal, screws, screen labels, placards and a
 // warm golden wash from the low sun at the upper left.
@@ -833,6 +873,17 @@ export function buildCockpit() {
   eicasMesh.position.set(1.6, 0.02, 0.012);
   panelGroup.add(eicasMesh);
 
+  // Master caution annunciator strip: four lamps across the top of the
+  // panel, between the MASTER WARN and FIRE WARN placards — low enough
+  // to clear the glareshield, just above the screens.
+  const annunciator = makeCanvas(768, 56);
+  const annunciatorMesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(1.15, 0.084),
+    new THREE.MeshBasicMaterial({ map: annunciator.texture }),
+  );
+  annunciatorMesh.position.set(0, 0.45, 0.02);
+  panelGroup.add(annunciatorMesh);
+
   // Glareshield over the top of the panel: slim, flush with the panel's
   // top edge, so it reads as a strip instead of a black wall.
   const shield = new THREE.Mesh(new THREE.BoxGeometry(4.3, 0.14, 0.3), darker);
@@ -916,6 +967,7 @@ export function buildCockpit() {
     nd,
     fmc,
     eicas,
+    annunciator,
     throttleLevers,
     flapPivot,
     trimGroup,
@@ -937,6 +989,8 @@ export function updateCockpit(cockpit, flight, game, dt, time) {
     cockpit.pfd.texture.needsUpdate = true;
     drawND(cockpit.nd.ctx, flight, game);
     cockpit.nd.texture.needsUpdate = true;
+    drawAnnunciator(cockpit.annunciator.ctx, computeWarnings(flight), time);
+    cockpit.annunciator.texture.needsUpdate = true;
     cockpit.eicasTick = (cockpit.eicasTick + 1) % 2;
     if (cockpit.eicasTick === 0) {
       drawEICAS(cockpit.eicas.ctx, flight, time);

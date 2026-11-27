@@ -18,6 +18,22 @@ export function stallSpeedForFlaps(flaps) {
   return [26, 22, 18][flaps] ?? 26;
 }
 
+// Master caution / warning annunciator: derived purely from live flight
+// state — no timers, no scripted values. Near-stall warns 15% above the
+// flaps stall speed so the lamp lights before the stall itself bites;
+// overspeed is past the published limit (MAX_SPEED).
+export function computeWarnings(flight) {
+  const stall = stallSpeedForFlaps(flight.flaps);
+  const lowFuel = flight.fuel < 25;
+  const nearStall = flight.speed < stall * 1.15;
+  const overspeed = flight.speed > MAX_SPEED;
+  const labels = [];
+  if (lowFuel) labels.push('LOW FUEL');
+  if (nearStall) labels.push('NEAR STALL');
+  if (overspeed) labels.push('OVERSPEED');
+  return { lowFuel, nearStall, overspeed, any: labels.length > 0, labels };
+}
+
 // Low golden sun on the north-west horizon — the glare source for the
 // cockpit view. Same position the world builder hangs the sun disc at.
 export const SUN_POS = { x: -1587, y: 220, z: -2184 };
